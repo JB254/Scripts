@@ -1,0 +1,68 @@
+import os
+import subprocess
+
+def ping_ip(ip):
+    print(f"Pinging {ip}")
+    response = os.system(f"ping -c 1 {ip}")
+    if response == 0:
+        print(f"{ip} is reachable")
+        return True
+    else:
+        print(f"{ip} is not reachable")
+        return False
+
+def telnet_port(ip, port):
+    print(f"Trying to telnet {ip} on port {port}")
+    try:
+        result = subprocess.run(
+            ['telnet', ip, str(port)],
+            input=b'',
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10
+        )
+        stdout = result.stdout.decode()
+        stderr = result.stderr.decode()
+        if "Connected" in stdout or "Escape character is" in stdout:
+            print(f"Connection to {ip}:{port} successful")
+            return True
+        else:
+            print(f"Connection to {ip}:{port} failed: {stderr}")
+            return False
+    except subprocess.TimeoutExpired:
+        print(f"Connection to {ip}:{port} timed out")
+        return False
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+def main(ip_list, ports):
+    reachable_ips = {}
+    unreachable_ips = {}
+
+    for ip in ip_list:
+        ping_reachable = ping_ip(ip)
+        reachable_ports = []
+        
+        for port in ports:
+            if telnet_port(ip, port):
+                reachable_ports.append(port)
+        
+        if reachable_ports:
+            reachable_ips[ip] = reachable_ports
+        else:
+            unreachable_ips[ip] = ports  # Still adding to unreachable, no ports were reachable
+
+    print("\nSummary:")
+    print("Reachable IPs and their reachable ports:")
+    for ip, ports in reachable_ips.items():
+        print(f"{ip}: Ports {ports}")
+
+    print("\nUnreachable IPs or no ports reachable:")
+    for ip in unreachable_ips.keys():
+        print(ip)
+
+if __name__ == "__main__":
+    ip_list = ["10.2.9.188", "192.168.1.2"]  # Add your list of IPs here
+    ports = [22, 80, 443]  # Add your list of ports here
+    main(ip_list, ports)
